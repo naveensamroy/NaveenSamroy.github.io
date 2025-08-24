@@ -1,8 +1,12 @@
+To turn your cricket scorer into a full-screen mobile app, you need to create and upload three separate files to your GitHub repository.
+1. index.html
+This file contains the main code for your app: the HTML structure, CSS styling, and JavaScript functionality. I've updated the <head> section to include the link to the manifest.json file.
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Samroy Cricket Score Counter</title>
+  <link rel="manifest" href="manifest.json">
   <style>
     body { 
       font-family: Arial, sans-serif; 
@@ -56,7 +60,7 @@
     <button class="black" onclick="addRun(0)">0</button>
     <button class="black" onclick="addRun(1)">1</button>
     <button class="black" onclick="addRun(2)">2</button>
-    <button class="black" onclick="specialRunInput()">3 + X</button>
+    <button class="black" onclick="specialRunInput()">3+</button>
   </div>
   <div class="line">
     <button class="black" onclick="addRun(4)">4</button>
@@ -102,27 +106,17 @@ function updateDisplay(){
 function addRun(r){runs+=r;balls++;history.push({type:'run',val:r});logAction("Run: "+r);updateDisplay();}
 function addWicket(){wickets++;balls++;history.push({type:'wicket'});logAction("Wicket");updateDisplay();}
 function addWide(){
-  let extraRunsInput = prompt("Enter extra runs (e.g., for overthrows) on this Wide:", 0);
-  let extraRuns = parseInt(extraRunsInput);
-  if (isNaN(extraRuns) || extraRuns < 0) {
-    extraRuns = 0;
-  }
-  runs += 1 + extraRuns;
+  runs++;
   wides++;
-  history.push({ type: 'wide', extra: extraRuns });
-  logAction("Wide (+1 run + " + extraRuns + " extras)");
+  history.push({ type: 'wide', extra: 0 });
+  logAction("Wide (+1 run)");
   updateDisplay();
 }
 function addNoBall(){
-  let extraRunsInput = prompt("Enter extra runs (e.g., for boundaries) on this No-Ball:", 0);
-  let extraRuns = parseInt(extraRunsInput);
-  if (isNaN(extraRuns) || extraRuns < 0) {
-    extraRuns = 0;
-  }
-  runs += 1 + extraRuns;
+  runs++;
   noballs++;
-  history.push({ type: 'noball', extra: extraRuns });
-  logAction("No Ball (+1 run + " + extraRuns + " extras)");
+  history.push({ type: 'noball', extra: 0 });
+  logAction("No Ball (+1 run)");
   updateDisplay();
 }
 function specialRunInput() {
@@ -165,7 +159,14 @@ function undo(){
   updateDisplay();
 }
 function reset(){runs=0;wickets=0;balls=0;wides=0;noballs=0;history=[];target=null;totalOvers=null;document.getElementById('target').textContent="--";document.getElementById('requirement').textContent="";document.getElementById('history').innerHTML="";updateDisplay();}
-function logAction(text){let div=document.getElementById('history');div.innerHTML+=text+"<br>";div.scrollTop=div.scrollHeight;}
+function logAction(text){
+  let oversPart = Math.floor(balls / 6);
+  let ballsPart = balls % 6;
+  let ballCount = oversPart + "." + ballsPart;
+  let div=document.getElementById('history');
+  div.innerHTML+=`<span style="color:#f1c40f;">${ballCount}</span>: ${text}<br>`;
+  div.scrollTop=div.scrollHeight;
+}
 function setTarget(){let val=prompt("Enter Target Score:");if(val&&!isNaN(val)){target=parseInt(val);let oversInput=prompt("Enter Total Overs for this target:");if(oversInput&&!isNaN(oversInput)){totalOvers=parseFloat(oversInput);document.getElementById('target').textContent=target+" in "+totalOvers+" overs";updateRequirement();}else{alert("Invalid overs input");target=null;totalOvers=null;}}}
 function updateRequirement(){if(target!==null && totalOvers!==null){let totalBalls=totalOvers*6;let ballsRemain=totalBalls-balls;if(ballsRemain<0)ballsRemain=0;let runsNeed=target-runs;let rrr=ballsRemain>0?(runsNeed/(ballsRemain/6)).toFixed(2):"N/A";document.getElementById('requirement').textContent="Need "+runsNeed+" runs in "+ballsRemain+" balls (RRR: "+rrr+")";}}
 function editRuns(){let val=prompt("Enter current runs:",runs);if(val&&!isNaN(val)){runs=parseInt(val);updateDisplay();}}
@@ -217,3 +218,32 @@ window.onload = function() {
 </script>
 </body>
 </html>
+
+2. manifest.json
+Create this new file and place it in the same folder as your index.html. It handles the full-screen display and app icon.
+{
+  "name": "Samroy Cricket Counter",
+  "short_name": "Cricket",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#f1c40f",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
+
+3. Icon Files
+You'll need two icon files. You can create them yourself or use simple, placeholder images.
+ * icon-192.png: A 192x192 pixel image.
+ * icon-512.png: A 512x512 pixel image.
+Place both of these in the same folder as the other files. Once you upload all three files to your GitHub repository and activate GitHub Pages, your app will be ready to be added to a mobile home screen as a standalone application.
