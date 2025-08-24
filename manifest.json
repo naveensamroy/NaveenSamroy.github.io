@@ -1,6 +1,6 @@
 {
   "name": "Samroy Cricket Counter",
-  "short_name": "Cricket",
+  "short_name": "Samroy Score",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#000000",
