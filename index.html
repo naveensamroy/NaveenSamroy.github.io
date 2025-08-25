@@ -1,558 +1,191 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, viewport-fit=cover"
-  />
-  <title>Samroy Cricket Score Counter</title>
-  <link rel="manifest" href="manifest.json" />
+  <meta charset="UTF-8">
+  <title>Cricket Score Counter</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* --- Base + Mobile-first layout --- */
-    * { box-sizing: border-box; }
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      color: #fff;
-      background: #0b0b0b;
-    }
     body {
-      background: url('https://upload.wikimedia.org/wikipedia/commons/1/13/Indian_Cricket_Team_in_2019.jpg')
-        no-repeat center center fixed;
-      background-size: cover;
-      position: relative;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background: #f5f5f5;
     }
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.70);
-      z-index: -1;
-    }
-
-    .app {
-      min-height: 100%;
-      display: flex;
-      flex-direction: column;
-      padding: 12px 12px calc(env(safe-area-inset-bottom, 0) + 12px);
-      gap: 12px;
-    }
-
     h1 {
-      text-align: center;
-      margin: 0;
-      color: #f1c40f;
-      font-size: clamp(18px, 4.8vw, 28px);
+      margin-bottom: 20px;
     }
-
-    /* --- Handheld Score Counter Machine --- */
-    .machine {
-      margin: 0 auto;
-      width: 100%;
-      max-width: 440px;
-      background: #222;
-      border: 5px solid #000;
-      border-radius: 18px;
-      padding: 14px;
-      box-shadow:
-        inset 0 0 24px rgba(0,0,0,0.8),
-        0 10px 24px rgba(0,0,0,0.6);
+    .score {
+      font-size: 32px;
+      margin: 20px 0;
+      font-weight: bold;
     }
-
-    .machine-top {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .flip {
-      display: grid;
-      grid-template-rows: auto 1fr;
-      gap: 6px;
-      background: #111;
-      border: 2px solid #4a4a4a;
-      border-radius: 10px;
-      padding: 8px;
-      box-shadow:
-        inset 0 -4px 0 #333,
-        inset 0 4px 0 #000;
+    button {
+      padding: 12px 20px;
+      font-size: 18px;
+      margin: 8px;
       cursor: pointer;
-      user-select: none;
-    }
-
-    .flip .label {
-      font-size: 12px;
-      letter-spacing: 0.04em;
-      color: #f1c40f;
-      text-align: center;
-      opacity: 0.95;
-    }
-
-    .flip .digits {
-      position: relative;
-      display: grid;
-      place-items: center;
-      height: clamp(56px, 16vw, 82px);
-      background:
-        linear-gradient(#0a0a0a 0 49%, #000 49%, #000 51%, #0a0a0a 51% 100%);
+      border: none;
       border-radius: 6px;
-      color: #fff;
-      font-weight: 800;
-      font-family: "Courier New", monospace;
-      font-size: clamp(26px, 8vw, 42px);
-      letter-spacing: 0.03em;
-      text-shadow: 0 0 1px rgba(255,255,255,0.25);
+      background: #007bff;
+      color: white;
     }
-
-    /* --- Button Pad (keys) --- */
-    .pad {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-top: 12px;
+    button:hover {
+      background: #0056b3;
     }
-    .row-span-2 { grid-column: span 3; display: grid; grid-template-columns: repeat(3,1fr); gap:10px; }
-    .btn {
-      appearance: none;
-      border: 0;
-      border-radius: 10px;
-      padding: 14px 12px;
-      color: #fff;
-      font-weight: 800;
-      font-size: clamp(15px, 4vw, 18px);
-      letter-spacing: 0.02em;
-      cursor: pointer;
-      box-shadow: 0 4px 0 #000, 0 8px 14px rgba(0,0,0,0.4);
-      transition: transform 0.02s ease, box-shadow 0.02s ease, filter 0.15s ease;
-      touch-action: manipulation;
-    }
-    .btn:active {
-      transform: translateY(2px);
-      box-shadow: 0 2px 0 #000, 0 4px 8px rgba(0,0,0,0.4);
-    }
-    .btn.black { background: #333; }
-    .btn.black:focus-visible { outline: 2px solid #bbb; }
-    .btn.red   { background: #b30000; }
-    .btn.red:focus-visible { outline: 2px solid #ffd1d1; }
-    .btn.gold  { background: #8a6f00; }
-    .btn.blue  { background: #2b6cb0; }
-
-    .helper {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      margin-top: 10px;
-    }
-
-    /* --- Target & History panels --- */
-    .panel {
-      margin: 0 auto;
-      width: 100%;
-      max-width: 440px;
-      background: rgba(17,17,17,0.92);
-      border: 2px solid #2b2b2b;
-      border-radius: 12px;
-      padding: 10px 12px;
-      box-shadow: 0 8px 18px rgba(0,0,0,0.5);
-    }
-    .panel h3 {
-      margin: 0 0 6px 0;
-      font-size: 14px;
-      color: #f1c40f;
-      letter-spacing: 0.03em;
-    }
-    .target-line { font-size: clamp(14px, 4vw, 16px); }
-    .req { opacity: 0.9; margin-top: 2px; }
-
-    .history {
-      max-height: 200px;
-      overflow-y: auto;
-      font-size: 13px;
-      line-height: 1.5;
-    }
-    .history .ball {
-      color: #f1c40f;
-      font-weight: 700;
-    }
-
-    /* --- Share Modal --- */
+    /* Popup Modal */
     .modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.7);
       display: none;
-      align-items: center;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
       justify-content: center;
-      padding: 16px;
-      z-index: 50;
+      align-items: center;
     }
-    .modal-card {
-      width: 100%;
-      max-width: 520px;
-      background: #1b1b1b;
-      border: 2px solid #333;
-      border-radius: 12px;
-      padding: 16px;
-    }
-    .modal-card h3 { margin: 0 0 8px 0; color: #f1c40f; font-size: 18px; }
-    .modal-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-    .share-input {
-      width: 100%;
-      padding: 12px;
+    .modal-content {
+      background: white;
+      padding: 20px;
       border-radius: 8px;
-      border: 1px solid #444;
-      background: #0f0f0f;
-      color: #fff;
-      font-size: 14px;
-      margin: 10px 0 12px;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
     }
-
-    /* --- Slightly wider layout on big screens --- */
-    @media (min-width: 520px) {
-      .machine-top { grid-template-columns: repeat(4, 1fr); }
+    .modal-content h2 {
+      margin-bottom: 15px;
+    }
+    .modal-content input {
+      padding: 10px;
+      width: 80%;
+      font-size: 16px;
+      margin-bottom: 15px;
+    }
+    .modal-content button {
+      width: 45%;
+      margin: 5px;
+    }
+    /* History box */
+    .history {
+      margin-top: 30px;
+      text-align: left;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .history h3 {
+      margin-top: 0;
+    }
+    .history-entry {
+      padding: 5px 0;
+      border-bottom: 1px solid #ddd;
     }
   </style>
 </head>
 <body>
-  <div class="app">
-    <h1>🏏 Samroy Cricket Score Counter</h1>
 
-    <!-- Handheld Machine -->
-    <section class="machine" aria-label="handheld counter">
-      <div class="machine-top">
-        <div class="flip" onclick="editRuns()" role="button" aria-label="Edit Runs">
-          <div class="label">RUNS</div>
-          <div class="digits" id="runs">0</div>
-        </div>
-
-        <div class="flip" onclick="editWickets()" role="button" aria-label="Edit Wickets">
-          <div class="label">WICKETS</div>
-          <div class="digits" id="wickets">0</div>
-        </div>
-
-        <div class="flip" onclick="editOvers()" role="button" aria-label="Edit Overs">
-          <div class="label">OVERS</div>
-          <div class="digits" id="overs">0.0</div>
-        </div>
-
-        <div class="flip" aria-label="Current Run Rate">
-          <div class="label">CRR</div>
-          <div class="digits" id="crr">0.00</div>
-        </div>
-      </div>
-
-      <!-- Button pad -->
-      <div class="pad" aria-label="Run buttons">
-        <button class="btn black" onclick="addRun(0)">0</button>
-        <button class="btn black" onclick="addRun(1)">+1</button>
-        <button class="btn black" onclick="addRun(2)">+2</button>
-
-        <div class="row-span-2">
-          <button class="btn black" onclick="addRun(4)">+4</button>
-          <button class="btn black" onclick="addRun(6)">+6</button>
-          <button class="btn black" onclick="specialRunInput()">3+</button>
-        </div>
-      </div>
-
-      <div class="helper" aria-label="Extras and actions">
-        <button class="btn red"  onclick="addWicket()">Wicket</button>
-        <button class="btn red"  onclick="addWide()">Wide</button>
-        <button class="btn red"  onclick="addNoBall()">No Ball</button>
-        <button class="btn blue" onclick="undo()">Undo</button>
-      </div>
-
-      <div class="helper" aria-label="Session actions">
-        <button class="btn gold" onclick="setTarget()">Set Target</button>
-        <button class="btn blue" onclick="generateShareableLink()">Share</button>
-        <button class="btn black" onclick="reset()">Reset</button>
-        <button class="btn black" onclick="toggleHistory()">History</button>
-      </div>
-    </section>
-
-    <!-- Target panel -->
-    <section class="panel">
-      <h3>🎯 Target</h3>
-      <div class="target-line">
-        <span id="target">--</span>
-      </div>
-      <div class="req" id="requirement"></div>
-    </section>
-
-    <!-- History panel -->
-    <section class="panel" id="historyPanel">
-      <h3>📜 History</h3>
-      <div class="history" id="history"></div>
-    </section>
+  <h1>🏏 Cricket Score Counter</h1>
+  <div class="score">
+    Score: <span id="score">0</span> / <span id="wickets">0</span>
   </div>
 
-  <!-- Share Modal -->
-  <div class="modal" id="shareModal" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
-    <div class="modal-card">
-      <h3 id="shareTitle">📤 Shareable Link</h3>
-      <input id="shareLink" class="share-input" type="text" readonly value="">
-      <div class="modal-actions">
-        <button class="btn blue" onclick="copyLink()">Copy Link</button>
-        <button class="btn black" onclick="closeShareModal()">Close</button>
-      </div>
+  <!-- Run Buttons -->
+  <button onclick="addRun(1)">+1 Run</button>
+  <button onclick="addRun(4)">+4</button>
+  <button onclick="addRun(6)">+6</button>
+  <br><br>
+
+  <!-- Extra Buttons -->
+  <button onclick="openPopup('wide')">Wide</button>
+  <button onclick="openPopup('noball')">No Ball</button>
+  <button onclick="openPopup('wicket')">Wicket</button>
+
+  <!-- Popup Modal -->
+  <div id="popup" class="modal">
+    <div class="modal-content">
+      <h2 id="popup-title"></h2>
+      <input type="number" id="extraRuns" placeholder="Enter extra runs" value="1">
+      <br>
+      <button onclick="applyExtra()">OK</button>
+      <button onclick="closePopup()">Cancel</button>
     </div>
   </div>
 
+  <!-- History Section -->
+  <div class="history">
+    <h3>📜 Match History</h3>
+    <div id="history-log"></div>
+  </div>
+
   <script>
-    // --- State ---
-    let runs = 0, wickets = 0, balls = 0; // balls = legal balls bowled
-    let wides = 0, noballs = 0;
-    let history = [];
-    let target = null, totalOvers = null;
-    let historyVisible = true;
-
-    // --- Helpers ---
-    function oversTextFromBalls(b) {
-      const o = Math.floor(b / 6);
-      const r = b % 6;
-      return o + "." + r;
-    }
-    function ballsFromOversText(txt) {
-      const parts = (txt || "0.0").split(".");
-      if (parts.length !== 2) return 0;
-      const o = parseInt(parts[0], 10) || 0;
-      const r = parseInt(parts[1], 10) || 0;
-      return o * 6 + r;
-    }
-
-    function logAction(text) {
-      const mark = oversTextFromBalls(balls);
-      const div = document.getElementById('history');
-      div.innerHTML += '<span class="ball">' + mark + '</span>: ' + text + '<br />';
-      div.scrollTop = div.scrollHeight;
-    }
+    let score = 0;
+    let wickets = 0;
+    let currentType = "";
 
     function updateDisplay() {
-      document.getElementById('runs').textContent = runs;
-      document.getElementById('wickets').textContent = wickets;
-      document.getElementById('overs').textContent = oversTextFromBalls(balls);
-
-      // CRR uses only legal balls
-      const oversf = balls / 6;
-      document.getElementById('crr').textContent = oversf > 0 ? (runs / oversf).toFixed(2) : "0.00";
-
-      updateRequirement();
-
-      // Persist to localStorage for auto-restore
-      try {
-        localStorage.setItem('samroy_state', JSON.stringify({
-          runs, wickets, balls, wides, noballs, target, totalOvers, history
-        }));
-      } catch (e) {}
+      document.getElementById("score").innerText = score;
+      document.getElementById("wickets").innerText = wickets;
     }
 
-    // --- Actions ---
-    function addRun(r) {
-      runs += r;
-      balls++; // legal ball
-      history.push({ type: 'run', val: r });
-      logAction('Run +' + r);
+    function addRun(runs) {
+      score += runs;
+      addHistory(`+${runs} Run(s)`);
       updateDisplay();
     }
 
-    function addWicket() {
-      wickets++;
-      balls++; // legal ball
-      history.push({ type: 'wicket' });
-      logAction('Wicket');
-      updateDisplay();
+    function openPopup(type) {
+      currentType = type;
+      let title = "";
+      if (type === "wide") title = "Wide Ball - Add Extra Runs";
+      else if (type === "noball") title = "No Ball - Add Extra Runs";
+      else if (type === "wicket") title = "Wicket - Add Extra Runs";
+
+      document.getElementById("popup-title").innerText = title;
+      document.getElementById("extraRuns").value = (type === "wicket" ? 0 : 1);
+      document.getElementById("popup").style.display = "flex";
     }
 
-    function addWide() {
-      runs++;    // +1 run
-      wides++;   // not a legal ball
-      history.push({ type: 'wide' });
-      logAction('Wide (+1)');
-      updateDisplay();
+    function closePopup() {
+      document.getElementById("popup").style.display = "none";
     }
 
-    function addNoBall() {
-      runs++;    // +1 run
-      noballs++; // not a legal ball
-      history.push({ type: 'noball' });
-      logAction('No Ball (+1)');
-      updateDisplay();
-    }
-
-    function specialRunInput() {
-      const val = prompt("Enter the number of runs:", "3");
-      const r = parseInt(val, 10);
-      if (isNaN(r)) return;
-      runs += r;
-      balls++; // counted ball
-      history.push({ type: 'special', runs: r });
-      logAction('Runs +' + r);
-      updateDisplay();
-    }
-
-    function undo() {
-      if (!history.length) return;
-      const last = history.pop();
-      if (last.type === 'run') {
-        runs -= last.val; balls--;
-      } else if (last.type === 'wicket') {
-        wickets--; balls--;
-      } else if (last.type === 'wide') {
-        runs--; wides--;
-      } else if (last.type === 'noball') {
-        runs--; noballs--;
-      } else if (last.type === 'special') {
-        runs -= last.runs; balls--;
-      }
-      logAction('Undo');
-      updateDisplay();
-    }
-
-    function reset() {
-      runs = 0; wickets = 0; balls = 0;
-      wides = 0; noballs = 0;
-      history = [];
-      target = null; totalOvers = null;
-      document.getElementById('target').textContent = '--';
-      document.getElementById('requirement').textContent = '';
-      document.getElementById('history').innerHTML = '';
-      updateDisplay();
-    }
-
-    function setTarget() {
-      const t = prompt("Enter Target Score:");
-      if (!t || isNaN(parseInt(t, 10))) return alert("Invalid target");
-      target = parseInt(t, 10);
-
-      const o = prompt("Enter Total Overs for this target:");
-      if (!o || isNaN(parseFloat(o))) {
-        target = null; totalOvers = null;
-        return alert("Invalid overs input");
-      }
-      totalOvers = parseFloat(o);
-      document.getElementById('target').textContent = target + " in " + totalOvers + " overs";
-      updateRequirement();
-    }
-
-    function updateRequirement() {
-      const box = document.getElementById('requirement');
-      if (target == null || totalOvers == null) { box.textContent = ""; return; }
-
-      const totalBalls = Math.round(totalOvers * 6);
-      let ballsRemain = totalBalls - balls;
-      if (ballsRemain < 0) ballsRemain = 0;
-
-      const runsNeed = target - runs;
-      const rrr = ballsRemain > 0 ? (runsNeed / (ballsRemain / 6)).toFixed(2) : "N/A";
-
-      if (runsNeed <= 0) {
-        box.textContent = "✅ Target achieved!";
-      } else if (ballsRemain === 0) {
-        box.textContent = "❌ All out of balls. Need " + runsNeed + " more.";
-      } else {
-        box.textContent = "Need " + runsNeed + " in " + ballsRemain + " balls (RRR: " + rrr + ")";
-      }
-    }
-
-    function editRuns() {
-      const v = prompt("Enter current runs:", String(runs));
-      if (v == null) return;
-      const n = parseInt(v, 10);
-      if (!isNaN(n)) { runs = n; updateDisplay(); }
-    }
-
-    function editWickets() {
-      const v = prompt("Enter current wickets:", String(wickets));
-      if (v == null) return;
-      const n = parseInt(v, 10);
-      if (!isNaN(n)) { wickets = n; updateDisplay(); }
-    }
-
-    function editOvers() {
-      const cur = oversTextFromBalls(balls);
-      const v = prompt("Enter current overs (e.g., 12.3):", cur);
-      if (v == null) return;
-      const b = ballsFromOversText(v);
-      if (!isNaN(b)) { balls = b; updateDisplay(); }
-    }
-
-    function toggleHistory() {
-      historyVisible = !historyVisible;
-      document.getElementById('historyPanel').style.display = historyVisible ? 'block' : 'none';
-    }
-
-    // --- Shareable link ---
-    function generateShareableLink() {
-      const base = window.location.origin + window.location.pathname;
-      const p = new URLSearchParams();
-      p.append('runs', runs);
-      p.append('wickets', wickets);
-      p.append('overs', oversTextFromBalls(balls));
-      p.append('wides', wides);
-      p.append('noballs', noballs);
-      if (target != null) p.append('target', target);
-      if (totalOvers != null) p.append('totalOvers', totalOvers);
-      const link = base + "?" + p.toString();
-
-      const input = document.getElementById('shareLink');
-      input.value = link;
-      document.getElementById('shareModal').style.display = 'flex';
-      // select text for easy manual copy if needed
-      setTimeout(() => { input.focus(); input.select(); }, 50);
-    }
-
-    function copyLink() {
-      const input = document.getElementById('shareLink');
-      input.select();
-      input.setSelectionRange(0, 99999);
-      Promise.resolve()
-        .then(() => navigator.clipboard && navigator.clipboard.writeText(input.value))
-        .catch(() => document.execCommand && document.execCommand('copy'))
-        .finally(() => alert("Link copied to clipboard!"));
-    }
-
-    function closeShareModal() {
-      document.getElementById('shareModal').style.display = 'none';
-    }
-
-    // --- Init: URL params or saved state ---
-    (function init() {
-      const urlParams = new URLSearchParams(window.location.search);
-      let loaded = false;
-
-      if (urlParams.has('runs')) {
-        runs = parseInt(urlParams.get('runs'), 10) || 0;
-        wickets = parseInt(urlParams.get('wickets'), 10) || 0;
-        wides = parseInt(urlParams.get('wides'), 10) || 0;
-        noballs = parseInt(urlParams.get('noballs'), 10) || 0;
-        balls = ballsFromOversText(urlParams.get('overs') || "0.0");
-        if (urlParams.has('target')) target = parseInt(urlParams.get('target'), 10);
-        if (urlParams.has('totalOvers')) totalOvers = parseFloat(urlParams.get('totalOvers'));
-        loaded = true;
-      } else {
-        try {
-          const saved = JSON.parse(localStorage.getItem('samroy_state') || "null");
-          if (saved) {
-            runs = saved.runs || 0;
-            wickets = saved.wickets || 0;
-            balls = saved.balls || 0;
-            wides = saved.wides || 0;
-            noballs = saved.noballs || 0;
-            history = Array.isArray(saved.history) ? saved.history : [];
-            target = saved.target ?? null;
-            totalOvers = saved.totalOvers ?? null;
-            loaded = true;
-          }
-        } catch(e) {}
+    function applyExtra() {
+      let runs = parseInt(document.getElementById("extraRuns").value) || 0;
+      
+      if (currentType === "wide") {
+        score += runs;
+        addHistory(`Wide +${runs} Run(s)`);
+      } 
+      else if (currentType === "noball") {
+        score += runs;
+        addHistory(`No Ball +${runs} Run(s)`);
+      } 
+      else if (currentType === "wicket") {
+        wickets++;
+        score += runs;
+        addHistory(`Wicket (Extra +${runs})`);
       }
 
-      if (loaded && target != null && totalOvers != null) {
-        document.getElementById('target').textContent = target + " in " + totalOvers + " overs";
-      }
       updateDisplay();
-    })();
+      closePopup();
+    }
+
+    function addHistory(text) {
+      let log = document.getElementById("history-log");
+      let entry = document.createElement("div");
+      entry.className = "history-entry";
+      entry.innerText = text;
+      // Insert at top (reverse order)
+      log.insertBefore(entry, log.firstChild);
+    }
   </script>
+
 </body>
 </html>
