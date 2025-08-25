@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Samroy Cricket Score Counter</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: Arial, sans-serif; 
+      text-align: center; 
+      background: url('https://upload.wikimedia.org/wikipedia/commons/1/13/Indian_Cricket_Team_in_2019.jpg') no-repeat center center fixed; 
+      background-size: cover;
+      position: relative;
+      color: #fff;
+      min-height: 100vh;
+      padding: 15px;
+    }
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: -1;
+    }
+    h1 { color: #f1c40f; margin: 10px 0; font-size: 22px; }
+
+    .scoreboard { 
+      display: flex; 
+      flex-wrap: wrap;
+      justify-content: center; 
+      gap: 10px; 
+      margin: 10px 0; 
+      position: relative; 
+      z-index: 1; 
+    }
+    .score-item { 
+      flex: 1 1 45%; 
+      min-width: 140px;
+      background: rgba(0,0,0,0.7); 
+      padding: 15px; 
+      border-radius: 10px; 
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5); 
+      cursor: pointer; 
+    }
+    .score-item:hover { background: rgba(255,255,255,0.2); }
+    .double-header { font-size: 28px; font-weight: bold; }
+    .small-header { font-size: 20px; }
+
+    .buttons { 
+      display: flex; 
+      flex-wrap: wrap; 
+      justify-content: center; 
+      gap: 10px; 
+      margin-top: 15px; 
+      position: relative; 
+      z-index: 1; 
+    }
+    .line { width: 100%; text-align: center; margin-top: 5px; }
+    button { 
+      font-size: 16px; 
+      padding: 10px 16px; 
+      cursor: pointer; 
+      border: none; 
+      border-radius: 8px; 
+      color: #fff; 
+    }
+    .black { background: #000; }
+    .black:hover { background: #333; }
+    .red { background: #e74c3c; }
+    .red:hover { background: #c0392b; }
+
+    .history { 
+      margin-top: 20px; 
+      max-height: 200px; 
+      overflow-y: auto; 
+      text-align: left; 
+      background: rgba(0,0,0,0.7); 
+      padding: 10px; 
+      border-radius: 10px; 
+      width: 100%; 
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5); 
+      position: relative; 
+      z-index: 1; 
+      font-size: 14px;
+    }
+    .target-box { margin-top: 15px; font-size: 18px; position: relative; z-index: 1; }
+
+    /* Copy link modal */
+    #shareModal {
+      display: none;
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: #222;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.8);
+      color: #fff;
+      z-index: 1000;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+    }
+    #shareModal input {
+      width: 100%;
+      padding: 8px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: none;
+      font-size: 14px;
+    }
+    #shareModal button { margin: 5px; }
+  </style>
+</head>
+<body>
+<h1>🏏 Samroy Cricket Score Counter</h1>
+
+<div class="scoreboard">
+  <div class="score-item double-header" onclick="editRuns()">Runs: <span id="runs">0</span></div>
+  <div class="score-item double-header" onclick="editWickets()">Wickets: <span id="wickets">0</span></div>
+</div>
+
+<div class="scoreboard">
+  <div class="score-item small-header" onclick="editOvers()">Overs: <span id="overs">0.0</span></div>
+  <div class="score-item small-header">CRR: <span id="crr">0.00</span></div>
+  <div class="score-item small-header">Wides: <span id="wides">0</span></div>
+  <div class="score-item small-header">No Balls: <span id="noballs">0</span></div>
+</div>
+
+<div class="buttons">
+  <div class="line">
+    <button class="black" onclick="addRun(0)">0</button>
+    <button class="black" onclick="addRun(1)">1</button>
+    <button class="black" onclick="addRun(2)">2</button>
+    <button class="black" onclick="specialRunInput()">3+</button>
+  </div>
+  <div class="line">
+    <button class="black" onclick="addRun(4)">4</button>
+    <button class="black" onclick="addRun(6)">6</button>
+  </div>
+  <div class="line">
+    <button class="red" onclick="addWicket()">Wicket</button>
+    <button class="red" onclick="addNoBall()">No Ball</button>
+    <button class="red" onclick="addWide()">Wide</button>
+  </div>
+  <div class="line">
+    <button class="red" onclick="undo()">Undo</button>
+    <button class="red" onclick="reset()">Reset</button>
+    <button class="red" onclick="setTarget()">Set Target</button>
+    <button class="red" onclick="generateShareableLink()">Share Score</button>
+  </div>
+</div>
+
+<div class="target-box">
+  🎯 Target: <span id="target">--</span><br>
+  <div id="requirement"></div>
+</div>
+
+<div class="history" id="history"></div>
+
+<!-- Share Modal -->
+<div id="shareModal">
+  <h3>📤 Shareable Link</h3>
+  <input type="text" id="shareLink" readonly>
+  <button class="black" onclick="copyLink()">Copy</button>
+  <button class="red" onclick="closeShareModal()">Close</button>
+</div>
+
+<script>
+let runs=0,wickets=0,balls=0,wides=0,noballs=0,history=[],target=null,totalOvers=null;
+
+function updateDisplay(){
+  document.getElementById('runs').textContent=runs;
+  document.getElementById('wickets').textContent=wickets;
+  let oversPart = Math.floor(balls / 6);
+  let ballsPart = balls % 6;
+  document.getElementById('overs').textContent=oversPart + "." + ballsPart;
+  
+  let oversf=balls/6; // only legal balls for CRR
+  document.getElementById('crr').textContent=oversf>0 ? (runs/oversf).toFixed(2):"0.00";
+  document.getElementById('wides').textContent=wides;
+  document.getElementById('noballs').textContent=noballs;
+  updateRequirement();
+}
+function addRun(r){runs+=r;balls++;history.push({type:'run',val:r});logAction("Run: "+r);updateDisplay();}
+function addWicket(){wickets++;balls++;history.push({type:'wicket'});logAction("Wicket");updateDisplay();}
+function addWide(){runs++;wides++;history.push({type:'wide'});logAction("Wide (+1 run)");updateDisplay();}
+function addNoBall(){runs++;noballs++;history.push({type:'noball'});logAction("No Ball (+1 run)");updateDisplay();}
+function specialRunInput(){let runsInput=prompt("Enter the number of runs:",3);let runsToAdd=parseInt(runsInput);if(isNaN(runsToAdd))return;runs+=runsToAdd;balls++;history.push({type:'special',runs:runsToAdd});logAction("Special Run: "+runsToAdd+" runs");updateDisplay();}
+function undo(){if(history.length===0)return;let last=history.pop();if(last.type==='run'){runs-=last.val;balls--;}else if(last.type==='wicket'){wickets--;balls--;}else if(last.type==='wide'){runs--;wides--;}else if(last.type==='noball'){runs--;noballs--;}else if(last.type==='special'){runs-=last.runs;balls--;}logAction("Undo last action");updateDisplay();}
+function reset(){runs=0;wickets=0;balls=0;wides=0;noballs=0;history=[];target=null;totalOvers=null;document.getElementById('target').textContent="--";document.getElementById('requirement').textContent="";document.getElementById('history').innerHTML="";updateDisplay();}
+function logAction(text){let oversPart=Math.floor(balls/6);let ballsPart=balls%6;let ballCount=oversPart+"."+ballsPart;let div=document.getElementById('history');div.innerHTML+=`<span style="color:#f1c40f;">${ballCount}</span>: ${text}<br>`;div.scrollTop=div.scrollHeight;}
+function setTarget(){let val=prompt("Enter Target Score:");if(val&&!isNaN(val)){target=parseInt(val);let oversInput=prompt("Enter Total Overs for this target:");if(oversInput&&!isNaN(oversInput)){totalOvers=parseFloat(oversInput);document.getElementById('target').textContent=target+" in "+totalOvers+" overs";updateRequirement();}else{alert("Invalid overs input");target=null;totalOvers=null;}}}
+function updateRequirement(){if(target!==null&&totalOvers!==null){let totalBalls=totalOvers*6;let ballsRemain=totalBalls-balls;if(ballsRemain<0)ballsRemain=0;let runsNeed=target-runs;let rrr=ballsRemain>0?(runsNeed/(ballsRemain/6)).toFixed(2):"N/A";document.getElementById('requirement').textContent="Need "+runsNeed+" runs in "+ballsRemain+" balls (RRR: "+rrr+")";}}
+function editRuns(){let val=prompt("Enter current runs:",runs);if(val&&!isNaN(val)){runs=parseInt(val);updateDisplay();}}
+function editWickets(){let val=prompt("Enter current wickets:",wickets);if(val&&!isNaN(val)){wickets=parseInt(val);updateDisplay();}}
+function editOvers(){let val=prompt("Enter current overs:",Math.floor(balls/6)+"."+(balls%6));if(val){let parts=val.split(".");if(parts.length===2){balls=(parseInt(parts[0])*6)+parseInt(parts[1]);updateDisplay();}}}
+
+function generateShareableLink() {
+  const url = window.location.origin + window.location.pathname;
+  const params = new URLSearchParams();
+  params.append('runs', runs);
+  params.append('wickets', wickets);
+  params.append('overs', Math.floor(balls/6)+"."+(balls%6));
+  params.append('wides', wides);
+  params.append('noballs', noballs);
+  if (target) params.append('target', target);
+  const shareableLink = `${url}?${params.toString()}`;
+  document.getElementById("shareLink").value=shareableLink;
+  document.getElementById("shareModal").style.display="block";
+}
+function copyLink(){let link=document.getElementById("shareLink");link.select();link.setSelectionRange(0,99999);navigator.clipboard.writeText(link.value).then(()=>{alert("Link copied to clipboard!");});}
+function closeShareModal(){document.getElementById("shareModal").style.display="none";}
+
+window.onload=function(){const urlParams=new URLSearchParams(window.location.search);if(urlParams.has('runs')){runs=parseInt(urlParams.get('runs'));wickets=parseInt(urlParams.get('wickets'));wides=parseInt(urlParams.get('wides'));noballs=parseInt(urlParams.get('noballs'));let oversStr=urlParams.get('overs').split('.');balls=(parseInt(oversStr[0])*6)+parseInt(oversStr[1]);if(urlParams.has('target')){target=parseInt(urlParams.get('target'));}updateDisplay();}}
+</script>
+</body>
+</html>
