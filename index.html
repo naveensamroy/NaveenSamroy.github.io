@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🏏 Red Blasters Score Counter 🏏</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      background-color: black;
+      color: blue;
+    }
+    h1 {
+      font-size: 20px;
+      margin: 10px;
+      white-space: nowrap;
+    }
+    .scoreboard {
+      font-size: 26px;
+      font-weight: bold;
+      margin: 15px 0;
+    }
+    .target {
+      font-size: 14px;
+      margin: 5px 0;
+    }
+    .history {
+      font-size: 14px;
+      margin: 10px;
+      white-space: pre-line;
+      text-align: left;
+      max-height: 150px;
+      overflow-y: auto;
+      border: 1px solid #444;
+      padding: 5px;
+    }
+    .btn {
+      font-size: 18px;
+      padding: 12px;
+      margin: 5px;
+      width: 30%;
+      background-color: #333;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background-color: #555;
+    }
+    .popup {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      color: black;
+      padding: 15px;
+      border-radius: 8px;
+      z-index: 1000;
+    }
+    .popup button {
+      margin-top: 10px;
+      padding: 8px 12px;
+    }
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+    }
+  </style>
+</head>
+<body>
+  <h1>🏏 Red Blasters Score Counter 🏏</h1>
+
+  <div class="scoreboard" id="scoreboard">0/0 (0.0)</div>
+  <div class="target" id="target">Target: -</div>
+  <div class="history" id="history">History:\n</div>
+
+  <div>
+    <button class="btn" onclick="addRun(0)">0</button>
+    <button class="btn" onclick="addRun(1)">1</button>
+    <button class="btn" onclick="addRun(2)">2</button>
+  </div>
+  <div>
+    <button class="btn" onclick="addRun(3)">3</button>
+    <button class="btn" onclick="addRun(4)">4 🎉</button>
+    <button class="btn" onclick="addRun(5)">5</button>
+  </div>
+  <div>
+    <button class="btn" onclick="addRun(6)">6 🎉</button>
+    <button class="btn" onclick="showWicketPopup()">Wicket 🦆</button>
+    <button class="btn" onclick="showExtraPopup('wide')">Wide ➕</button>
+  </div>
+  <div>
+    <button class="btn" onclick="showExtraPopup('noball')">No Ball ➕</button>
+    <button class="btn" onclick="showSetTargetPopup()">🎯 Set Target</button>
+    <button class="btn" onclick="confirmUndo()">↩️ Undo</button>
+  </div>
+  <div>
+    <button class="btn" onclick="flipCoin()">🪙 Toss</button>
+    <button class="btn" onclick="showSharePopup()">📤</button>
+  </div>
+  <!-- Overlay for popups -->
+  <div class="overlay" id="overlay" onclick="closeAllPopups()"></div>
+
+  <!-- Manual Run Popup -->
+  <div class="popup" id="manualRunPopup">
+    <h3>Enter runs (3+)</h3>
+    <input type="number" id="manualRunInput" min="3" value="3"/>
+    <br/>
+    <button onclick="submitManualRun()">Add</button>
+    <button onclick="closeAllPopups()">Cancel</button>
+  </div>
+
+  <!-- Wicket Popup -->
+  <div class="popup" id="wicketPopup">
+    <h3>Wicket – Runs scored (if any)</h3>
+    <div>
+      <button onclick="applyWicket(0)">0</button>
+      <button onclick="applyWicket(1)">1</button>
+      <button onclick="applyWicket(2)">2</button>
+      <button onclick="applyWicket(3)">3</button>
+      <button onclick="applyWicket(4)">4</button>
+      <button onclick="applyWicket(5)">5</button>
+    </div>
+    <button onclick="closeAllPopups()">Cancel</button>
+  </div>
+
+  <!-- Extra Popup (Wide / No Ball) -->
+  <div class="popup" id="extraPopup">
+    <h3 id="extraTitle">Extra</h3>
+    <input type="number" id="extraRunsInput" min="1" value="1"/>
+    <br/>
+    <button onclick="submitExtra()">Add</button>
+    <!-- Wide can have Wicket Run Out or Stump -->
+    <div id="extraWicketOptions" style="margin-top:8px; display:none;">
+      <button onclick="addExtraWicket('Run Out')">Run Out</button>
+      <button onclick="addExtraWicket('Stump Out')">Stump Out</button>
+    </div>
+    <button onclick="closeAllPopups()">Cancel</button>
+  </div>
+
+  <!-- Set Target Popup -->
+  <div class="popup" id="targetPopup">
+    <h3>Set Target</h3>
+    <input type="number" id="targetRunsInput" placeholder="Target Runs"/>
+    <input type="text" id="targetOversInput" placeholder="Overs left e.g. 4.3"/>
+    <br/>
+    <button onclick="submitTarget()">Set</button>
+    <button onclick="closeAllPopups()">Cancel</button>
+  </div>
+
+<script>
+let score=0, wickets=0, overs=0, balls=0;
+let targetScore=null, targetBalls=null;
+let historyArr=[]; 
+let currentExtraType=null;
+
+// Update scoreboard
+function updateScoreboard(){
+  document.getElementById('scoreboard').innerText = `${score}/${wickets} (${overs}.${balls})`;
+  if(targetScore!==null && targetBalls!==null){
+    let needed = Math.max(targetScore - score,0);
+    document.getElementById('target').innerText = `Target: ${targetScore} | ${needed} Needed in ${targetBalls} Balls`;
+  } else document.getElementById('target').innerText = "Target: -";
+  document.getElementById('history').innerText = "History:\n"+historyArr.join("\n");
+}
+
+// Runs
+function addRun(r){
+  score+=r;
+  balls++;
+  if(balls>=6){ balls=0; overs++; }
+  historyArr.unshift(`+${r} Run${r>1?'s':''}`);
+  updateScoreboard();
+}
+
+// Manual Run
+function showManualRunPopup(){ 
+  document.getElementById('manualRunPopup').style.display='block'; 
+  document.getElementById('overlay').style.display='block';
+}
+function submitManualRun(){
+  let val=parseInt(document.getElementById('manualRunInput').value);
+  if(!isNaN(val) && val>=3){ addRun(val); closeAllPopups(); }
+}
+
+// Wicket
+function showWicketPopup(){ 
+  document.getElementById('wicketPopup').style.display='block'; 
+  document.getElementById('overlay').style.display='block';
+}
+function applyWicket(runs){
+  if(runs>0) addRun(runs);
+  wickets++;
+  balls++;
+  if(balls>=6){ balls=0; overs++; }
+  historyArr.unshift(`Wicket +${runs} runs`);
+  updateScoreboard();
+  closeAllPopups();
+}
+
+// Extra
+function showExtraPopup(type){
+  currentExtraType = type;
+  document.getElementById('extraTitle').innerText = type==='wide'?'Wide':'No Ball';
+  document.getElementById('extraRunsInput').value=1;
+  if(type==='wide'){
+    document.getElementById('extraWicketOptions').style.display='block';
+  } else {
+    document.getElementById('extraWicketOptions').style.display='none';
+  }
+  document.getElementById('extraPopup').style.display='block';
+  document.getElementById('overlay').style.display='block';
+}
+function submitExtra(){
+  let runs=parseInt(document.getElementById('extraRunsInput').value)||1;
+  score+=runs;
+  let text = `${currentExtraType==='wide'?'Wide':'No Ball'} +${runs}`;
+  historyArr.unshift(text);
+  updateScoreboard();
+  closeAllPopups();
+}
+function addExtraWicket(type){
+  wickets++;
+  historyArr.unshift(`${currentExtraType==='wide'?'Wide':'No Ball'} Wicket: ${type}`);
+  updateScoreboard();
+  closeAllPopups();
+}
+
+// Target
+function showSetTargetPopup(){
+  document.getElementById('targetPopup').style.display='block';
+  document.getElementById('overlay').style.display='block';
+}
+function submitTarget(){
+  let tr=parseInt(document.getElementById('targetRunsInput').value);
+  let oversStr=document.getElementById('targetOversInput').value;
+  let ob=oversStr.split('.');
+  if(ob.length!==2) { alert("Invalid overs"); return; }
+  let tBalls=parseInt(ob[0])*6 + parseInt(ob[1]);
+  if(!isNaN(tr) && !isNaN(tBalls)){
+    targetScore=tr; targetBalls=tBalls;
+    historyArr.unshift(`Target set: ${tr} in ${tBalls} balls`);
+    updateScoreboard();
+    closeAllPopups();
+  } else alert("Invalid input");
+}
+
+// Close all popups
+function closeAllPopups(){
+  document.getElementById('overlay').style.display='none';
+  document.querySelectorAll('.popup').forEach(p=>p.style.display='none');
+}
+<!-- Undo Confirmation -->
+<script>
+function undoLast(){
+  if(historyArr.length===0){ alert("Nothing to undo"); return; }
+  if(confirm("Are you sure you want to undo last action?")){
+    let last = historyArr.shift(); // remove last action from top
+    // Rollback logic
+    if(last.includes("Wicket")){
+      wickets = Math.max(wickets-1,0);
+    } else if(last.includes("Run")){
+      let r = parseInt(last.match(/\+(\d+)/)?.[1]||0);
+      score = Math.max(score - r,0);
+      balls--;
+      if(balls<0){ balls=5; overs=Math.max(overs-1,0); }
+    } else if(last.includes("Target set")){
+      targetScore=null; targetBalls=null;
+    }
+    updateScoreboard();
+  }
+}
+
+// Reset Confirmation
+function resetMatch(){
+  if(confirm("Are you sure you want to reset the match? All data will be cleared.")){
+    score=0; wickets=0; overs=0; balls=0;
+    targetScore=null; targetBalls=null;
+    historyArr=[];
+    updateScoreboard();
+  }
+}
+
+// Share Score
+function shareScore(){
+  let params = new URLSearchParams();
+  params.set("score",score);
+  params.set("wickets",wickets);
+  params.set("overs",overs);
+  params.set("balls",balls);
+  params.set("targetScore",targetScore??"");
+  params.set("targetBalls",targetBalls??"");
+  params.set("history",encodeURIComponent(historyArr.join("|")));
+  let link = window.location.href.split("?")[0] + "?" + params.toString();
+  prompt("Copy this link to share:", link);
+}
+
+// Load score from URL
+function loadFromURL(){
+  let params = new URLSearchParams(window.location.search);
+  if(params.has("score")) score=parseInt(params.get("score")||0);
+  if(params.has("wickets")) wickets=parseInt(params.get("wickets")||0);
+  if(params.has("overs")) overs=parseInt(params.get("overs")||0);
+  if(params.has("balls")) balls=parseInt(params.get("balls")||0);
+  if(params.has("targetScore")) targetScore=parseInt(params.get("targetScore")||0);
+  if(params.has("targetBalls")) targetBalls=parseInt(params.get("targetBalls")||0);
+  if(params.has("history")){
+    let hist = decodeURIComponent(params.get("history")).split("|");
+    historyArr = hist;
+  }
+  updateScoreboard();
+}
+window.onload = loadFromURL;
+
+// Coin Toss
+function tossCoin(){
+  let res = Math.random() < 0.5 ? "Heads" : "Tails";
+  alert("🪙 Coin Toss Result: " + res);
+}
+</script>
+<!-- Wide / No Ball with Wicket Options -->
+<div id="wideModal" class="modal">
+  <h2>Wide ➕</h2>
+  <div class="row">
+    <button onclick="addExtraRun('wide',1)">+1</button>
+    <button onclick="addExtraRun('wide',2)">+2</button>
+    <button onclick="addExtraRun('wide',3)">+3</button>
+    <button onclick="addExtraRun('wide',0,'Run Out')">Run Out</button>
+    <button onclick="addExtraRun('wide',0,'Stump Out')">Stump Out</button>
+    <button onclick="closeAll()">Cancel</button>
+  </div>
+</div>
+
+<div id="noBallModal" class="modal">
+  <h2>No Ball ⚠️</h2>
+  <div class="row">
+    <button onclick="addExtraRun('noball',1)">+1</button>
+    <button onclick="addExtraRun('noball',2)">+2</button>
+    <button onclick="addExtraRun('noball',0,'Run Out')">Run Out</button>
+    <button onclick="closeAll()">Cancel</button>
+  </div>
+</div>
+
+<script>
+function addExtraRun(type,runs=0,wicket=null){
+  score += runs;
+  let text = type==='wide'?'Wide':'No Ball';
+  if(wicket) { wickets++; text += ` Wicket (${wicket})`; }
+  historyArr.unshift(`${overs}.${balls} ${text} +${runs}`);
+  if(!wicket) incrementBall();
+  updateScoreboard();
+  closeAll();
+}
+
+function incrementBall(){
+  balls++;
+  if(balls>=6){ balls=0; overs++; }
+}
+
+// Scoreboard Update (works on mobile & desktop)
+function updateScoreboard(){
+  document.getElementById('score').innerText = score;
+  document.getElementById('wickets').innerText = wickets;
+  if(targetScore){
+    let need = Math.max(targetScore-score,0);
+    document.getElementById('targetDisplay').innerText = `Target: ${targetScore} | ${need} Needed in ${targetBalls} Balls`;
+  } else document.getElementById('targetDisplay').innerText = '-';
+  
+  const log = document.getElementById('history-log');
+  log.innerHTML='';
+  historyArr.forEach(e=>{
+    let div = document.createElement('div');
+    div.className='history-entry'; div.textContent=e; log.appendChild(div);
+  });
+}
+
+// Mobile-friendly adjustments
+window.addEventListener('resize', ()=>{
+  if(window.innerWidth<420){
+    document.querySelectorAll('.score').forEach(el=>el.style.fontSize='40px');
+    document.querySelectorAll('button').forEach(b=>{b.style.fontSize='18px'; b.style.height='50px';});
+  }
+});
+
+</script>
