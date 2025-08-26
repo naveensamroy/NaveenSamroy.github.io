@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🏏 Red Blasters Score Counter 🏏</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      background-color: white;
+      color: blue;
+    }
+    h1 {
+      font-size: 22px;
+      margin: 10px 0;
+      white-space: nowrap;
+    }
+    .scoreboard {
+      font-size: 36px;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    .target {
+      font-size: 16px;
+      margin-top: 4px;
+    }
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 15px;
+    }
+    button {
+      padding: 12px;
+      font-size: 18px;
+      font-weight: bold;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background-color: lightblue;
+    }
+    button:hover { opacity: 0.8; }
+    .history {
+      margin: 15px;
+      font-size: 14px;
+      text-align: left;
+      white-space: pre-wrap;
+      max-height: 180px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 8px;
+      border-radius: 5px;
+      background: #f9f9f9;
+    }
+    .popup {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      justify-content: center;
+      align-items: center;
+    }
+    .popup-content {
+      background: white;
+      padding: 15px;
+      border-radius: 6px;
+      text-align: center;
+      max-width: 300px;
+    }
+    .close-btn {
+      margin-top: 10px;
+      background: red;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🏏 Red Blasters Score Counter 🏏</h1>
+
+  <div class="scoreboard">
+    <span id="score">0/0</span>
+  </div>
+  <div class="target" id="target">Target: -</div>
+
+  <div class="buttons">
+    <button onclick="addRun(0)">0</button>
+    <button onclick="addRun(1)">1</button>
+    <button onclick="addRun(2)">2</button>
+    <button onclick="addRun(3)">3</button>
+    <button onclick="customRun()">3+</button>
+    <button onclick="addRun(4)">4</button>
+    <button onclick="addRun(6)">6</button>
+    <button onclick="showWicketPopup()">Wicket</button>
+    <button onclick="showWidePopup()">Wide</button>
+    <button onclick="showNoBallPopup()">No Ball</button>
+    <button onclick="setTarget()">🎯</button>
+    <button onclick="undoAction()">↩️</button>
+    <button onclick="flipCoin()">🪙</button>
+    <button onclick="showTeamPopup()">👥</button>
+    <button onclick="showScorecard()">📑</button>
+  </div>
+
+  <div class="history" id="history"></div>
+
+<script>
+// ---------- Part 2 ----------
+
+function editScore(){ 
+  const v=prompt('Enter current score:',score); 
+  if(v===null) return; 
+  const n=parseInt(v,10); 
+  if(!isNaN(n)&&n>=0){
+    score=n; 
+    pushEvent(`Manual Update: Score ${score} / Wickets ${wickets}`,false,false,0,0,0); 
+    updateDisplay(); 
+  } else alert('Invalid number'); 
+}
+
+function editWickets(){ 
+  const v=prompt('Enter current wickets:',wickets); 
+  if(v===null) return; 
+  const n=parseInt(v,10); 
+  if(!isNaN(n)&&n>=0){
+    wickets=n; 
+    pushEvent(`Manual Update: Score ${score} / Wickets ${wickets}`,false,false,0,0,0); 
+    updateDisplay(); 
+  } else alert('Invalid number'); 
+}
+
+function undoLast(){ 
+  if(events.length===0) return; 
+  if(confirm('Are you sure you want to undo last action?')){
+    const ev=events.pop();
+    const log=document.getElementById('history-log'); 
+    if(log.firstChild) log.removeChild(log.firstChild);
+    if(ev.runsDelta) score-=ev.runsDelta; 
+    if(ev.wicketDelta) wickets-=ev.wicketDelta;
+    if(ev.ballsLeftDelta) ballsLeft-=ev.ballsLeftDelta;
+    if(ev.countBall){ 
+      currentBall--; 
+      if(currentBall<0){ 
+        currentOver--; 
+        currentBall=5; 
+        if(currentOver<0){ currentOver=0; currentBall=0;} 
+      } 
+    }
+    updateDisplay();
+  }
+}
+
+function resetMatch(){ 
+  if(confirm('Are you sure you want to reset the match?')){
+    score=0; wickets=0; targetScore=null; ballsLeft=null; currentOver=0; currentBall=0; 
+    document.getElementById('history-log').innerHTML=''; 
+    events.length=0; 
+    updateDisplay(); 
+  }
+}
+
+function toggleBg(){
+  const b=document.body;
+  if(b.style.backgroundColor===''||b.style.backgroundColor==='rgb(0, 0, 0)'||b.style.backgroundColor==='#000000'){
+    b.style.backgroundColor='#ffffff'; 
+    b.style.color='#000';
+    document.querySelectorAll('.modal').forEach(m=>m.style.color='#000');
+  } else { 
+    b.style.backgroundColor='#000'; 
+    b.style.color='var(--sky)'; 
+    document.querySelectorAll('.modal').forEach(m=>m.style.color='var(--sky'); 
+  }
+}
+
+function showModal(id){ 
+  document.getElementById('overlay').style.display='block'; 
+  document.getElementById(id).style.display='block'; 
+}
+
+function closeAll(){ 
+  document.getElementById('overlay').style.display='none'; 
+  document.querySelectorAll('.modal').forEach(m=>m.style.display='none'); 
+}
+
+// Share Score
+function openShare(){
+  const params=new URLSearchParams();
+  params.set('score',score); 
+  params.set('wickets',wickets); 
+  params.set('target',targetScore!==null?targetScore:'');
+  params.set('ballsLeft',ballsLeft!==null?ballsLeft:''); 
+  params.set('currentOver',currentOver); 
+  params.set('currentBall',currentBall);
+  const arr=[]; 
+  document.querySelectorAll('.history-entry').forEach(e=>arr.push(e.textContent));
+  params.set('history',encodeURIComponent(arr.join('|')));
+  const url=window.location.origin+window.location.pathname+'?'+params.toString();
+  document.getElementById('shareLink').value=url; 
+  showModal('shareModal');
+}
+
+async function copyShare(){ 
+  const v=document.getElementById('shareLink').value; 
+  try{ 
+    if(navigator.clipboard&&navigator.clipboard.writeText) await navigator.clipboard.writeText(v); 
+    else { 
+      const inp=document.getElementById('shareLink'); 
+      inp.select(); 
+      document.execCommand('copy'); 
+    } 
+    alert('Link copied'); 
+  } catch(e){ 
+    alert('Copy failed'); 
+  } 
+}
+
+// Download Score
+function downloadScore(){
+  let txt=`Score: ${score} / ${wickets}\nTarget: ${targetScore ?? '-'}\nBalls Left: ${ballsLeft ?? '-'}\nHistory:\n`;
+  document.querySelectorAll('.history-entry').forEach(e=>txt+=e.textContent+'\n');
+  const blob=new Blob([txt],{type:'text/plain'}); 
+  const a=document.createElement('a'); 
+  a.href=URL.createObjectURL(blob); 
+  a.download='match_score.txt'; 
+  a.click(); 
+  URL.revokeObjectURL(a.href);
+}
+
+// Load score from URL
+window.onload=function(){
+  const p=new URLSearchParams(window.location.search);
+  if(p.has('score')) score=parseInt(p.get('score')||'0',10)||0;
+  if(p.has('wickets')) wickets=parseInt(p.get('wickets')||'0',10)||0;
+  if(p.has('target')){const t=p.get('target'); if(t!=='') targetScore=parseInt(t,10);}
+  if(p.has('ballsLeft')){const b=p.get('ballsLeft'); if(b!=='') ballsLeft=parseInt(b,10);}
+  if(p.has('currentOver')) currentOver=parseInt(p.get('currentOver')||'0',10)||0;
+  if(p.has('currentBall')) currentBall=parseInt(p.get('currentBall')||'0',10)||0;
+  const hist=p.get('history');
+  if(hist){ 
+    const arr=decodeURIComponent(hist).split('|'); 
+    const log=document.getElementById('history-log'); 
+    arr.forEach(t=>{ 
+      const d=document.createElement('div'); 
+      d.className='history-entry'; 
+      d.textContent=t; 
+      log.appendChild(d); 
+    }); 
+  }
+  updateDisplay();
+}
+</script>
+
+<script>
+/* ========= COIN TOSS ========= */
+function tossCoin() {
+  const result = Math.random() < 0.5 ? "Heads 🟢" : "Tails 🔴";
+  alert("🪙 Coin Toss Result: " + result);
+  pushHistory(`Coin Toss: ${result}`);
+  updateUI();
+}
+
+/* ========= RESET MATCH ========= */
+function resetMatch() {
+  if (!confirm("Reset entire match?")) return;
+  runs = 0; wickets = 0; balls = 0;
+  targetScore = null; targetBalls = null;
+  historyLog.length = 0;
+  lastEvent = null;
+  updateUI();
+}
+
+/* ========= SHARE SCORE ========= */
+function shareScore() {
+  const text = `Score: ${runs}/${wickets}\nBalls: ${oversText()}\nHistory:\n${historyLog.join("\n")}`;
+  navigator.clipboard.writeText(text).then(() => {
+    alert("Score copied to clipboard!");
+  }).catch(()=>alert("Unable to copy."));
+}
+
+/* ========= SAVE SCORE ========= */
+function downloadScore() {
+  const data = `Score: ${runs}/${wickets}\nBalls: ${oversText()}\nHistory:\n${historyLog.join("\n")}`;
+  const blob = new Blob([data], {type: "text/plain"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "score.txt"; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ========= TOGGLE LIGHT/DARK ========= */
+function toggleBg() {
+  const b = document.body;
+  if (b.style.backgroundColor === "rgb(0, 0, 0)" || b.style.backgroundColor === "#000000" || !b.style.backgroundColor) {
+    b.style.backgroundColor = "#fff"; b.style.color = "#000";
+    document.querySelectorAll(".modal").forEach(m=>m.style.color="#000");
+  } else {
+    b.style.backgroundColor = "#000"; b.style.color = "#87CEEB";
+    document.querySelectorAll(".modal").forEach(m=>m.style.color="#87CEEB");
+  }
+}
+
+/* ========= OVERS TO BALLS UTILITY ========= */
+function oversToBalls(str) {
+  if (!str) return NaN;
+  const parts = str.split(".");
+  if (parts.length === 1) return parseInt(parts[0],10)*6;
+  const o = parseInt(parts[0],10); const b = parseInt(parts[1],10);
+  if (isNaN(o)||isNaN(b)||b>5||b<0) return NaN;
+  return o*6 + b;
+}
+
+/* ========= SAVE STATE LOCALLY ========= */
+function saveState() {
+  const s = {runs, wickets, balls, targetScore, targetBalls, historyLog};
+  localStorage.setItem("scoreState", JSON.stringify(s));
+}
+
+/* ========= LOAD STATE ON PAGE LOAD ========= */
+function loadState() {
+  const s = localStorage.getItem("scoreState");
+  if (!s) return;
+  try {
+    const obj = JSON.parse(s);
+    runs = obj.runs||0;
+    wickets = obj.wickets||0;
+    balls = obj.balls||0;
+    targetScore = obj.targetScore||null;
+    targetBalls = obj.targetBalls||null;
+    historyLog.length = 0;
+    if (Array.isArray(obj.historyLog)) historyLog.push(...obj.historyLog);
+    updateUI();
+  } catch(e){ console.warn(e); }
+}
+window.addEventListener("load", loadState);
+
+/* ========= DYNAMIC POPUP STYLES ========= */
+const style = document.createElement("style");
+style.innerHTML = `
+#overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000;}
+.popup { display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
+        background:#111; color:#87CEEB; border:2px solid #87CEEB; padding:14px; border-radius:10px; z-index:1001; flex-direction:column; }
+.popup-content { display:flex; flex-direction:column; gap:6px; }
+.popup-content button { padding:10px 8px; font-size:16px; cursor:pointer; border-radius:6px; border:1px solid #87CEEB; background:#222; color:#87CEEB; }
+.popup-content button:hover { background:#333; }
+`;
+document.head.appendChild(style);
+</script>
+
