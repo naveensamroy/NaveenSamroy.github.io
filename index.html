@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Samroy Cricket Score Counter</title>
+  <style>
+    :root {
+      --sky: #00bfff;
+      --blue: #007bff;
+    }
+    body {
+      margin:0; 
+      font-family: Arial, sans-serif; 
+      background:#000; 
+      color: var(--sky);
+      display:flex; 
+      flex-direction:column; 
+      align-items:center; 
+      justify-content:flex-start; 
+      min-height:100vh;
+      padding:10px;
+      box-sizing:border-box;
+    }
+    h1 { 
+      font-size: 22px; 
+      margin: 5px 0; 
+      color: var(--blue);
+      text-align:center; 
+      white-space:nowrap;
+    }
+    .scoreboard {
+      font-size:28px; 
+      margin:10px 0; 
+      text-align:center;
+    }
+    .controls {
+      display:flex; 
+      flex-wrap:wrap; 
+      gap:8px; 
+      justify-content:center; 
+      margin:10px 0;
+    }
+    button {
+      padding:10px 14px; 
+      font-size:14px; 
+      border:none; 
+      border-radius:6px; 
+      background: var(--blue); 
+      color:#fff; 
+      cursor:pointer;
+      flex:1 1 45%;
+      min-width:120px;
+    }
+    button:active { opacity:0.8; }
+    .history {
+      width:100%; 
+      max-width:400px; 
+      margin:15px 0; 
+      padding:10px; 
+      border:1px solid var(--sky); 
+      border-radius:6px; 
+      background:#111; 
+      max-height:200px; 
+      overflow-y:auto;
+      font-size:14px;
+    }
+    .history-entry { margin:3px 0; }
+    .modal, #overlay {
+      display:none; 
+      position:fixed; 
+      top:0; left:0; right:0; bottom:0; 
+      justify-content:center; 
+      align-items:center;
+    }
+    #overlay { background:rgba(0,0,0,0.7); z-index:999; }
+    .modal {
+      background:#fff; 
+      color:#000; 
+      padding:20px; 
+      border-radius:8px; 
+      z-index:1000; 
+      max-width:90%; 
+      box-sizing:border-box;
+    }
+    .modal button { 
+      background: var(--blue); 
+      color:#fff; 
+      margin-top:10px; 
+      width:100%; 
+    }
+    input, select {
+      padding:6px; 
+      font-size:14px; 
+      width:100%; 
+      margin:6px 0;
+    }
+    @media (min-width:600px){
+      button { flex:1 1 30%; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Samroy Cricket Score Counter</h1>
+  <div class="scoreboard" id="scoreDisplay">Score: 0/0</div>
+  <div class="controls">
+    <button onclick="addRun(1)">+1 Run</button>
+    <button onclick="addRun(2)">+2 Runs</button>
+    <button onclick="addRun(3)">+3 Runs</button>
+    <button onclick="addRun(4)">+4 Runs</button>
+    <button onclick="addRun(5)">+5 Runs</button>
+    <button onclick="addRun(6)">+6 Runs</button>
+    <button onclick="showModal('wicketModal')">Wicket</button>
+    <button onclick="showModal('extraModal')">Extras</button>
+    <button onclick="undoLast()">Undo</button>
+    <button onclick="resetMatch()">Reset</button>
+    <button onclick="openShare()">Share</button>
+    <button onclick="downloadScore()">Download</button>
+    <button onclick="toggleBg()">Toggle BG</button>
+    <button onclick="flipCoin()">Toss a Coin</button>
+  </div>
+  <div id="oversDisplay">Overs: 0.0</div>
+  <div id="targetDisplay">Target: -</div>
+  <div id="ballsLeftDisplay">Balls Left: -</div>
+
+  <div class="history" id="history-log"></div>
+
+  <div id="overlay"></div>
+
+  <!-- Wicket Modal -->
+  <div class="modal" id="wicketModal">
+    <h3>Wicket!</h3>
+    <label>Runs on this ball:</label>
+    <select id="wicketRuns">
+      <option value="0">0</option>
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+    </select>
+    <label>Fielder Name:</label>
+    <input type="text" id="fielderName" placeholder="Enter fielder">
+    <button onclick="confirmWicket()">Confirm Wicket</button>
+    <button onclick="closeAll()">Cancel</button>
+  </div>
+  <!-- Extras Modal -->
+  <div class="modal" id="extraModal">
+    <h3>Extras</h3>
+    <button onclick="addWide()">Wide</button>
+    <button onclick="addNoBall()">No Ball</button>
+    <button onclick="addBye()">Bye</button>
+    <button onclick="addLegBye()">Leg Bye</button>
+    <button onclick="closeAll()">Cancel</button>
+  </div>
+
+  <!-- Wide with Wicket Modal -->
+  <div class="modal" id="wideWicketModal">
+    <h3>Wide + Wicket</h3>
+    <select id="wideWicketType">
+      <option value="runout">Run Out</option>
+      <option value="stump">Stump Out</option>
+    </select>
+    <label>Fielder:</label>
+    <input type="text" id="wideWicketFielder" placeholder="Enter fielder">
+    <button onclick="confirmWideWicket()">Confirm</button>
+    <button onclick="closeAll()">Cancel</button>
+  </div>
+
+  <!-- No Ball with Wicket Modal -->
+  <div class="modal" id="noBallWicketModal">
+    <h3>No Ball + Wicket</h3>
+    <select id="noBallWicketType">
+      <option value="runout">Run Out</option>
+    </select>
+    <label>Fielder:</label>
+    <input type="text" id="noBallWicketFielder" placeholder="Enter fielder">
+    <button onclick="confirmNoBallWicket()">Confirm</button>
+    <button onclick="closeAll()">Cancel</button>
+  </div>
+
+  <!-- Share Modal -->
+  <div class="modal" id="shareModal">
+    <h3>Share Match Link</h3>
+    <input type="text" id="shareLink" readonly value="https://naveensamroy.github.io/">
+    <button onclick="copyLink()">Copy Link</button>
+    <button onclick="closeAll()">Close</button>
+  </div>
+
+  <!-- Undo Confirmation Modal -->
+  <div class="modal" id="undoModal">
+    <h3>Undo Last Action?</h3>
+    <button onclick="confirmUndo()">Yes, Undo</button>
+    <button onclick="closeAll()">Cancel</button>
+  </div>
+
+<script>
+  let score = 0, wickets = 0, balls = 0, overs = 0, target = "-", ballsLeft = "-";
+  let history = [];
+  let lastAction = null;
+  let currentBowler = "";
+  let bgToggle = false;
+
+  function updateDisplay(){
+    document.getElementById("scoreDisplay").textContent = `Score: ${score}/${wickets}`;
+    document.getElementById("oversDisplay").textContent = `Overs: ${Math.floor(balls/6)}.${balls%6}`;
+    document.getElementById("targetDisplay").textContent = `Target: ${target}`;
+    document.getElementById("ballsLeftDisplay").textContent = `Balls Left: ${ballsLeft}`;
+    renderHistory();
+  }
+
+  function renderHistory(){
+    let log = document.getElementById("history-log");
+    log.innerHTML = "";
+    history.forEach(h => {
+      let div = document.createElement("div");
+      div.className="history-entry";
+      div.textContent = h;
+      log.appendChild(div);
+    });
+  }
+
+  function addRun(r){
+    score += r;
+    balls++;
+    history.push(`+${r} run(s)`);
+    lastAction = {type:"run", value:r};
+    saveState();
+    updateDisplay();
+  }
+
+  function showModal(id){
+    document.getElementById("overlay").style.display="flex";
+    document.getElementById(id).style.display="flex";
+  }
+  function closeAll(){
+    document.getElementById("overlay").style.display="none";
+    document.querySelectorAll(".modal").forEach(m=>m.style.display="none");
+  }
+<script>
+// ---------- Part 3 ----------
+
+// ======= Wicket confirm =======
+function confirmWicket(){
+  const runsOnBall = parseInt(document.getElementById('wicketRuns').value, 10) || 0;
+  const fielder = document.getElementById('fielderName').value || '';
+  // apply runs (if any) and wicket; legal ball consumed
+  if (runsOnBall > 0) score += runsOnBall;
+  wickets += 1;
+  balls += 1;
+  const lbl = `${Math.floor(balls/6)}.${balls%6}`;
+  const entry = runsOnBall > 0 ? `${lbl} +${runsOnBall} W (${fielder})` : `${lbl} W (${fielder})`;
+  history.push(entry);
+  lastAction = { type:'wicket', runs: runsOnBall, fielder };
+  saveState();
+  closeAll(); updateDisplay();
+}
+
+// ======= Extras: Wide / NoBall / Bye / LegBye =======
+// Wide entry (opens secondary popup if wicket needed)
+function addWide(){
+  // show wide/wicket modal
+  showModal('wideWicketModal');
+}
+function confirmWideWicket(){
+  const type = document.getElementById('wideWicketType').value;
+  const fielder = document.getElementById('wideWicketFielder').value || '';
+  // wides add 1 run by default (plus extras if you want to prompt)
+  const runsAdded = 1;
+  score += runsAdded;
+  // wides do not consume legal ball
+  let lbl = `${Math.floor(balls/6)}.${balls%6}`;
+  if (type){
+    wickets += 1;
+    history.push(`${lbl} Wide +${runsAdded} • W (${type} ${fielder})`);
+    lastAction = { type:'wideWicket', runs: runsAdded, wtype:type, fielder };
+  } else {
+    history.push(`${lbl} Wide +${runsAdded}`);
+    lastAction = { type:'wide', runs: runsAdded };
+  }
+  saveState();
+  closeAll(); updateDisplay();
+}
+
+// No Ball entry
+function addNoBall(){
+  showModal('noBallWicketModal');
+}
+function confirmNoBallWicket(){
+  const type = document.getElementById('noBallWicketType').value;
+  const fielder = document.getElementById('noBallWicketFielder').value || '';
+  const runsAdded = 1;
+  score += runsAdded;
+  // no-ball does not consume legal ball
+  const lbl = `${Math.floor(balls/6)}.${balls%6}`;
+  if (type){
+    wickets += 1;
+    history.push(`${lbl} No Ball +${runsAdded} • W (${type} ${fielder})`);
+    lastAction = { type:'noBallWicket', runs: runsAdded, wtype:type, fielder };
+  } else {
+    history.push(`${lbl} No Ball +${runsAdded}`);
+    lastAction = { type:'noball', runs: runsAdded };
+  }
+  saveState();
+  closeAll(); updateDisplay();
+}
+
+// Bye
+function addBye(){
+  const v = prompt('Enter bye runs (1-5):', '1');
+  if (v === null) return;
+  const n = parseInt(v,10);
+  if (isNaN(n) || n < 0) { alert('Invalid'); return; }
+  score += n;
+  // byes consume legal ball
+  balls += 1;
+  const lbl = `${Math.floor(balls/6)}.${balls%6}`;
+  history.push(`${lbl} Bye +${n}`);
+  lastAction = { type:'bye', runs:n };
+  saveState(); updateDisplay();
+}
+
+// Leg Bye
+function addLegBye(){
+  const v = prompt('Enter leg-bye runs (1-5):', '1');
+  if (v === null) return;
+  const n = parseInt(v,10);
+  if (isNaN(n) || n < 0) { alert('Invalid'); return; }
+  score += n;
+  balls += 1;
+  const lbl = `${Math.floor(balls/6)}.${balls%6}`;
+  history.push(`${lbl} Leg Bye +${n}`);
+  lastAction = { type:'legbye', runs:n };
+  saveState(); updateDisplay();
+}
+
+// ======= Undo system =======
+function undoLast(){
+  // backward-compatible single-step undo that reverts lastAction if available
+  if (!lastAction && history.length === 0) { alert('Nothing to undo'); return; }
+  // open confirmation modal
+  showModal('undoModal');
+}
+function confirmUndo(){
+  closeAll();
+  if (!lastAction && history.length === 0) { alert('Nothing to undo'); return; }
+  // examine last history entry
+  const last = history.pop();
+  // revert based on lastAction.type if present, else try parse
+  if (lastAction && lastAction.type){
+    switch(lastAction.type){
+      case 'run':
+        score = Math.max(0, score - (lastAction.value||0));
+        balls = Math.max(0, balls - 1); break;
+      case 'wicket':
+        wickets = Math.max(0, wickets - 1);
+        score = Math.max(0, score - (lastAction.runs||0));
+        balls = Math.max(0, balls - 1); break;
+      case 'wide':
+        score = Math.max(0, score - (lastAction.runs||1)); break;
+      case 'wideWicket':
+        score = Math.max(0, score - (lastAction.runs||1));
+        wickets = Math.max(0, wickets - 1); break;
+      case 'noball':
+        score = Math.max(0, score - (lastAction.runs||1)); break;
+      case 'noBallWicket':
+        score = Math.max(0, score - (lastAction.runs||1));
+        wickets = Math.max(0, wickets - 1); break;
+      case 'bye':
+        score = Math.max(0, score - (lastAction.runs||0));
+        balls = Math.max(0, balls - 1); break;
+      case 'legbye':
+        score = Math.max(0, score - (lastAction.runs||0));
+        balls = Math.max(0, balls - 1); break;
+      default:
+        // fallback: attempt parse numbers out of last text
+        const m = last && last.match && last.match(/\+(\d+)/);
+        if (m) score = Math.max(0, score - parseInt(m[1],10));
+        break;
+    }
+  } else {
+    // try to parse generic last entry text
+    const m = last && last.match && last.match(/\+(\d+)/);
+    if (m) score = Math.max(0, score - parseInt(m[1],10));
+  }
+  lastAction = null;
+  saveState();
+  updateDisplay();
+}
+
+// ======= Target setting =======
+function setTarget(){
+  const t = prompt('Set target runs:','');
+  if (t === null) return;
+  const o = prompt('Overs left (e.g. 4.3):','');
+  if (o === null) return;
+  const tn = parseInt(t,10);
+  const ob = oversToBalls(o);
+  if (isNaN(tn) || isNaN(ob)) { alert('Invalid'); return; }
+  target = tn;
+  ballsLeft = ob;
+  target = tn;
+  // log target set
+  history.push(`- Target set ${target} in ${ballsLeft} balls`);
+  lastAction = { type:'setTarget', target, ballsLeft };
+  saveState();
+  updateDisplay();
+}
+
+// helper convert overs string to balls
+function oversToBalls(str){
+  if (!str) return NaN;
+  const s = String(str).trim();
+  if (!s.includes('.')) {
+    const ov = parseInt(s,10);
+    return isNaN(ov)?NaN:ov*6;
+  }
+  const [o,p] = s.split('.');
+  const ov = parseInt(o||'0',10), pb = parseInt(p||'0',10);
+  if (isNaN(ov) || isNaN(pb) || pb<0 || pb>5) return NaN;
+  return ov*6 + pb;
+}
+
+// ======= Save / Load state =======
+function saveState(){
+  try {
+    const st = { score, wickets, balls, history, target, ballsLeft, lastAction };
+    localStorage.setItem('samroyScoreState', JSON.stringify(st));
+  } catch(e){ console.warn(e); }
+}
+function loadState(){
+  try {
+    const raw = localStorage.getItem('samroyScoreState');
+    if (!raw) return;
+    const st = JSON.parse(raw);
+    score = st.score || 0; wickets = st.wickets || 0; balls = st.balls || 0;
+    history = Array.isArray(st.history) ? st.history : (st.history||[]);
+    target = st.target || "-"; ballsLeft = st.ballsLeft || "-";
+    lastAction = st.lastAction || null;
+    updateDisplay();
+  } catch(e){ console.warn(e); }
+}
+
+// ======= Share & Copy link =======
+function openShare(){
+  showModal('shareModal');
+}
+function copyLink(){
+  const el = document.getElementById('shareLink');
+  el.select(); el.setSelectionRange(0,99999);
+  try{
+    document.execCommand('copy');
+    alert('Link copied');
+  } catch(e){
+    alert('Copy failed');
+  }
+}
+
+// ======= Download score =========
+function downloadScore(){
+  const txt = `Score: ${score}/${wickets}\nOvers: ${Math.floor(balls/6)}.${balls%6}\nHistory:\n${history.join('\n')}`;
+  const blob = new Blob([txt], { type:'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'match_score.txt'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ======= Coin toss =======
+function flipCoin(){
+  const res = Math.random() < 0.5 ? 'Heads 🟢' : 'Tails 🔴';
+  history.push(`Coin Toss: ${res}`);
+  lastAction = { type:'cointoss', value:res };
+  saveState();
+  updateDisplay();
+}
+
+// Load state on start
+window.addEventListener('load', ()=>{ loadState(); updateDisplay(); });
+
+</script>
+<!-- ---------- Part 4 ---------- -->
+<style>
+  /* Extra responsive tweaks */
+  @media (max-width:600px){
+    .score { font-size: 22px; }
+    .buttons button { font-size: 14px; padding: 10px; }
+    .modal { width: 95%; }
+  }
+</style>
+
+<!-- Close Body & HTML -->
+</body>
+</html>
